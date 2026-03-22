@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/prisma";
 import { setAuthCookie, signAuthToken, verifyPassword } from "@/app/lib/auth";
 
@@ -23,7 +24,13 @@ export async function POST(req: Request) {
       where: { email: email.toLowerCase() },
       select: { id: true, email: true, name: true, role: true, passwordHash: true },
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2021") {
+      return NextResponse.json({ error: "Banco não inicializado. Execute o setup do banco e tente novamente." }, { status: 500 });
+    }
+    if (err instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json({ error: "Sem conexão com o banco. Verifique DATABASE_URL." }, { status: 500 });
+    }
     return NextResponse.json({ error: "Erro ao entrar. Verifique o banco e tente novamente." }, { status: 500 });
   }
 

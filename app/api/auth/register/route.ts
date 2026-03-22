@@ -23,9 +23,19 @@ export async function POST(req: Request) {
   const requestedRole = role ?? "STUDENT";
 
   if (requestedRole === "SCHOOL") {
-    const existingSchoolUsers = await prisma.user.count({ where: { role: "SCHOOL" } }).catch(() => 0);
-    if (existingSchoolUsers > 0) {
-      return NextResponse.json({ error: "Cadastro de escola indisponível" }, { status: 403 });
+    try {
+      const existingSchoolUsers = await prisma.user.count({ where: { role: "SCHOOL" } });
+      if (existingSchoolUsers > 0) {
+        return NextResponse.json({ error: "Cadastro de escola indisponível" }, { status: 403 });
+      }
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2021") {
+        return NextResponse.json({ error: "Banco não inicializado. Execute o setup do banco e tente novamente." }, { status: 500 });
+      }
+      if (err instanceof Prisma.PrismaClientInitializationError) {
+        return NextResponse.json({ error: "Sem conexão com o banco. Verifique DATABASE_URL." }, { status: 500 });
+      }
+      return NextResponse.json({ error: "Erro ao cadastrar. Verifique o banco e tente novamente." }, { status: 500 });
     }
   }
 
@@ -44,6 +54,12 @@ export async function POST(req: Request) {
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2021") {
+      return NextResponse.json({ error: "Banco não inicializado. Execute o setup do banco e tente novamente." }, { status: 500 });
+    }
+    if (err instanceof Prisma.PrismaClientInitializationError) {
+      return NextResponse.json({ error: "Sem conexão com o banco. Verifique DATABASE_URL." }, { status: 500 });
     }
     return NextResponse.json({ error: "Erro ao cadastrar. Verifique o banco e tente novamente." }, { status: 500 });
   }
