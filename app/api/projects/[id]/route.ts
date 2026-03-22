@@ -78,7 +78,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const can = await prisma.$queryRaw<Array<{ ok: number }>>`
       SELECT 1 AS ok
       FROM "ProjectParticipant"
-      WHERE projectId = ${id} AND userId = ${user.id} AND status = 'ACTIVE'
+      WHERE "projectId" = ${id} AND "userId" = ${user.id} AND "status" = 'ACTIVE'
       LIMIT 1
     `;
     if (can.length === 0) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });

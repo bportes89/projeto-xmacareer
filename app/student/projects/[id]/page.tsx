@@ -58,7 +58,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     const can = await prisma.$queryRaw<Array<{ ok: number }>>`
       SELECT 1 AS ok
       FROM "ProjectParticipant"
-      WHERE projectId = ${id} AND userId = ${user.id} AND status = 'ACTIVE'
+      WHERE "projectId" = ${id} AND "userId" = ${user.id} AND "status" = 'ACTIVE'
       LIMIT 1
     `;
     if (can.length === 0) redirect("/student/projects");

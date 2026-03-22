@@ -36,12 +36,12 @@ export default async function StudentProjectsPage() {
         ownerEmail: string | null;
       }>
     >`
-      SELECT p.id, p.title, p.status, p.updatedAt, p.createdAt, u.name AS ownerName, u.email AS ownerEmail
+      SELECT p.id, p.title, p.status, p."updatedAt", p."createdAt", u.name AS ownerName, u.email AS ownerEmail
       FROM "ProjectParticipant" pp
-      JOIN "Project" p ON p.id = pp.projectId
-      JOIN "User" u ON u.id = p.userId
-      WHERE pp.userId = ${user.id} AND pp.status = 'ACTIVE'
-      ORDER BY p.updatedAt DESC
+      JOIN "Project" p ON p.id = pp."projectId"
+      JOIN "User" u ON u.id = p."userId"
+      WHERE pp."userId" = ${user.id} AND pp."status" = 'ACTIVE'
+      ORDER BY p."updatedAt" DESC
     `,
   ]);
 
