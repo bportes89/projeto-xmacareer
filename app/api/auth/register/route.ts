@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/app/lib/prisma";
 import { hashPassword, setAuthCookie, signAuthToken } from "@/app/lib/auth";
 
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
     await setAuthCookie(token);
 
     return NextResponse.json({ user }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return NextResponse.json({ error: "Email já cadastrado" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Erro ao cadastrar. Verifique o banco e tente novamente." }, { status: 500 });
   }
 }

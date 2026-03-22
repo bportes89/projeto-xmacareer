@@ -17,10 +17,15 @@ export async function POST(req: Request) {
   }
 
   const { email, password } = parsed.data;
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-    select: { id: true, email: true, name: true, role: true, passwordHash: true },
-  });
+  let user: { id: string; email: string; name: string; role: "STUDENT" | "SCHOOL"; passwordHash: string } | null = null;
+  try {
+    user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true, email: true, name: true, role: true, passwordHash: true },
+    });
+  } catch {
+    return NextResponse.json({ error: "Erro ao entrar. Verifique o banco e tente novamente." }, { status: 500 });
+  }
 
   if (!user) return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
   const ok = await verifyPassword(password, user.passwordHash);
