@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      ".prisma/*": ["./node_modules/.prisma/*"]
     }
   },
   "include": [

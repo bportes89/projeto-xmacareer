@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  STUDENT
+  SCHOOL
+}
+
+enum ProjectStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum ProjectParticipantRole {
+  MENTOR
+  PEER
+  MANAGER
+}
+
+enum ProjectParticipantStatus {
+  ACTIVE
+}
+
+enum FeedbackRole {
+  SELF
+  MENTOR
+  PEER
+  MANAGER
+}
+
+enum ProjectExperienceType {
+  ACADEMIC
+  INTERNSHIP
+  WORK
+  VOLUNTEER
+  PERSONAL
+  EVENT
+  OTHER
+}
+
+enum TaxonomyCategory {
+  HARD
+  SOFT
+  AREA
+  LEADERSHIP
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(STUDENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects Project[]
+  projectParticipants ProjectParticipant[]
+  feedbacksGiven ProjectFeedback[]
+  evidenceFilesUploaded ProjectEvidenceFile[]
+  portfolioShare PortfolioShare?
+  competencyProfile UserCompetencyProfile?
+  competencyProfileSnapshots UserCompetencyProfileSnapshot[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  headline    String?
+  experienceDescription String?
+  experienceType ProjectExperienceType?
+  organization String?
+  roleTitle   String?
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  projectUrl  String?
+  repoUrl     String?
+  tags        Json?
+  confirmedCompetencies Json?
+  situation   String
+  task        String
+  action      String
+  result      String
+  development String
+  evidences   Json?
+  status      ProjectStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  analysis ProjectAnalysis?
+  participants ProjectParticipant[]
+  invites ProjectInvite[]
+  feedbacks ProjectFeedback[]
+  evidenceFiles ProjectEvidenceFile[]
+}
+
+model ProjectAnalysis {
+  projectId         String  @id
+  project           Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  competenciesHard  Json
+  competenciesSoft  Json
+  areas             Json
+  leadershipProfile String
+  leadershipScore   Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ProjectParticipant {
+  id        String                   @id @default(cuid())
+  projectId String
+  project   Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectParticipantRole
+  status    ProjectParticipantStatus @default(ACTIVE)
+  createdAt DateTime                 @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model ProjectInvite {
+  id           String                 @id @default(cuid())
+  projectId    String
+  project      Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email        String
+  role         ProjectParticipantRole
+  tokenHash    String                 @unique
+  expiresAt    DateTime
+  createdAt    DateTime               @default(now())
+
+  @@unique([projectId, email, role])
+}
+
+model ProjectFeedback {
+  id              String       @id @default(cuid())
+  projectId       String
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  evaluatorUserId String
+  evaluator       User         @relation(fields: [evaluatorUserId], references: [id], onDelete: Cascade)
+  role            FeedbackRole
+  ratings         Json
+  comment         String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([projectId, evaluatorUserId])
+}
+
+model ProjectEvidenceFile {
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedByUserId String
+  uploadedBy       User     @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  name             String
+  mime             String
+  size             Int
+  data             Bytes
+  createdAt        DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model PortfolioShare {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SkillTaxonomyRule {
+  id        String           @id @default(cuid())
+  category  TaxonomyCategory
+  label     String
+  keywords  Json
+  weight    Int              @default(10)
+  active    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([category, label])
+  @@index([category, active])
+}
+
+model UserCompetencyProfile {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competenciesHard Json
+  competenciesSoft Json
+  areas            Json
+  leadershipScore  Int
+  leadershipProfile String
+  feedbackOverallAvg Float?
+  feedbackCount     Int      @default(0)
+  sourceProjectsCount Int     @default(0)
+  sourceFeedbackCount Int     @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model UserCompetencyProfileSnapshot {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competenciesHard Json
+  competenciesSoft Json
+  areas            Json
+  leadershipScore  Int
+  leadershipProfile String
+  feedbackOverallAvg Float?
+  feedbackCount     Int      @default(0)
+  sourceProjectsCount Int     @default(0)
+  sourceFeedbackCount Int     @default(0)
+  computedAt       DateTime  @default(now())
+
+  @@index([userId, computedAt])
+}
