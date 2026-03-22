@@ -19,11 +19,20 @@ export async function POST(req: Request) {
   }
 
   const { email, name, password, role } = parsed.data;
+  const requestedRole = role ?? "STUDENT";
+
+  if (requestedRole === "SCHOOL") {
+    const existingSchoolUsers = await prisma.user.count({ where: { role: "SCHOOL" } }).catch(() => 0);
+    if (existingSchoolUsers > 0) {
+      return NextResponse.json({ error: "Cadastro de escola indisponível" }, { status: 403 });
+    }
+  }
+
   const passwordHash = await hashPassword(password);
 
   try {
     const user = await prisma.user.create({
-      data: { email: email.toLowerCase(), name, passwordHash, role: role ?? "STUDENT" },
+      data: { email: email.toLowerCase(), name, passwordHash, role: requestedRole },
       select: { id: true, email: true, name: true, role: true },
     });
 
