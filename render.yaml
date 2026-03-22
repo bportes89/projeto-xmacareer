@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: xmacareer
+    env: docker
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        value: file:/data/prod.db
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: heuristic
