@@ -7,7 +7,7 @@ type LoginState =
   | { status: "submitting" }
   | { status: "error"; message: string };
 
-export default function LoginForm() {
+export default function LoginForm({ targetRole }: { targetRole?: "STUDENT" | "SCHOOL" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<LoginState>({ status: "idle" });
@@ -40,6 +40,16 @@ export default function LoginForm() {
         .then((r) => r.json())
         .catch(() => ({ user: null }));
 
+      if (targetRole && me?.user?.role !== targetRole) {
+        setState({
+          status: "error",
+          message:
+            targetRole === "SCHOOL"
+              ? "Esta área é para Gestão. Entre com a conta de escola."
+              : "Esta área é para Aluno. Entre com a conta de aluno.",
+        });
+        return;
+      }
       if (me?.user?.role === "SCHOOL") {
         window.location.href = "/admin/people-analytics";
         return;

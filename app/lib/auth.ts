@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/app/lib/prisma";
 
 export type AuthUser = {
   id: string;
@@ -94,5 +95,12 @@ export async function getAuthUser(): Promise<AuthUser | null> {
 export async function requireAuthUser(): Promise<AuthUser> {
   const user = await getAuthUser();
   if (!user) redirect("/auth/login");
-  return user;
+  const row = await prisma.user.findFirst({
+    where: { id: user.id },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  if (!row) {
+    redirect("/auth/login");
+  }
+  return { id: row.id, email: row.email, name: row.name, role: row.role as "STUDENT" | "SCHOOL" };
 }

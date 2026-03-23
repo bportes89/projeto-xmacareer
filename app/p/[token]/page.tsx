@@ -54,14 +54,46 @@ function normalizeConfirmedCompetencies(value: unknown) {
   };
 }
 
+function normalizePortfolioSettings(value: unknown) {
+  if (!value || typeof value !== "object") return { featuredProjectIds: [] as string[], hideStar: false, hideEvidences: false };
+  const v = value as { featuredProjectIds?: unknown; hideStar?: unknown; hideEvidences?: unknown };
+  const featuredProjectIds = Array.isArray(v.featuredProjectIds)
+    ? v.featuredProjectIds.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 3)
+    : [];
+  return {
+    featuredProjectIds,
+    hideStar: Boolean(v.hideStar),
+    hideEvidences: Boolean(v.hideEvidences),
+  };
+}
+
 export default async function PublicPortfolioPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
   const share = await prisma.portfolioShare.findFirst({
     where: { token, enabled: true },
-    select: { userId: true, user: { select: { name: true } } },
+    select: {
+      userId: true,
+      user: {
+        select: {
+          name: true,
+          profile: {
+            select: {
+              headline: true,
+              location: true,
+              bio: true,
+              linkedinUrl: true,
+              githubUrl: true,
+              websiteUrl: true,
+              portfolioSettings: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!share) notFound();
+  const portfolioSettings = normalizePortfolioSettings(share.user.profile?.portfolioSettings);
 
   const projects = await prisma.project.findMany({
     where: { userId: share.userId, status: "SUBMITTED" },
@@ -92,12 +124,65 @@ export default async function PublicPortfolioPage({ params }: { params: Promise<
     },
   });
 
+  const orderedProjects = (() => {
+    if (portfolioSettings.featuredProjectIds.length === 0) return projects;
+    const featured = portfolioSettings.featuredProjectIds
+      .map((id) => projects.find((p) => p.id === id))
+      .filter((x): x is (typeof projects)[number] => Boolean(x));
+    const rest = projects.filter((p) => !portfolioSettings.featuredProjectIds.includes(p.id));
+    return [...featured, ...rest];
+  })();
+
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
       <div className="rounded-3xl border border-slate-300/70 bg-white p-6 shadow-sm">
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Portfólio</div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{share.user.name}</h1>
-        <div className="mt-1 text-sm text-slate-600">Experiências em STAR + D</div>
+        {share.user.profile?.headline?.trim().length ? (
+          <div className="mt-1 text-sm text-slate-700">{share.user.profile.headline.trim()}</div>
+        ) : (
+          <div className="mt-1 text-sm text-slate-600">Experiências em STAR + D</div>
+        )}
+        {share.user.profile?.location?.trim().length ? (
+          <div className="mt-1 text-sm text-slate-600">{share.user.profile.location.trim()}</div>
+        ) : null}
+        {(share.user.profile?.linkedinUrl || share.user.profile?.githubUrl || share.user.profile?.websiteUrl) ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {share.user.profile?.linkedinUrl ? (
+              <a
+                href={share.user.profile.linkedinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+              >
+                LinkedIn
+              </a>
+            ) : null}
+            {share.user.profile?.githubUrl ? (
+              <a
+                href={share.user.profile.githubUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+              >
+                GitHub
+              </a>
+            ) : null}
+            {share.user.profile?.websiteUrl ? (
+              <a
+                href={share.user.profile.websiteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+              >
+                Site
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+        {share.user.profile?.bio?.trim().length ? (
+          <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{share.user.profile.bio.trim()}</div>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-4">
@@ -106,7 +191,7 @@ export default async function PublicPortfolioPage({ params }: { params: Promise<
             Ainda não há experiências públicas.
           </div>
         ) : (
-          projects.map((p) => {
+          orderedProjects.map((p) => {
             const title = p.title?.trim().length ? p.title : "Experiência sem título";
             const evidences = toEvidenceArray(p.evidences);
             const confirmed = normalizeConfirmedCompetencies(p.confirmedCompetencies);
@@ -198,7 +283,7 @@ export default async function PublicPortfolioPage({ params }: { params: Promise<
                   </div>
                 ) : null}
 
-                {evidences.length ? (
+                {!portfolioSettings.hideEvidences && evidences.length ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {evidences.slice(0, 8).map((e) => (
                       <a
@@ -215,7 +300,7 @@ export default async function PublicPortfolioPage({ params }: { params: Promise<
                   </div>
                 ) : null}
 
-                {p.evidenceFiles.length ? (
+                {!portfolioSettings.hideEvidences && p.evidenceFiles.length ? (
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {p.evidenceFiles.slice(0, 8).map((f) => (
                       <a
@@ -231,15 +316,19 @@ export default async function PublicPortfolioPage({ params }: { params: Promise<
                   </div>
                 ) : null}
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <Section title="Situação" text={p.situation} />
-                  <Section title="Tarefa" text={p.task} />
-                  <Section title="Ação" text={p.action} />
-                  <Section title="Resultado" text={p.result} />
-                </div>
-                <div className="mt-3">
-                  <Section title="Desenvolvimento" text={p.development} />
-                </div>
+                {!portfolioSettings.hideStar ? (
+                  <>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                      <Section title="Situação" text={p.situation} />
+                      <Section title="Tarefa" text={p.task} />
+                      <Section title="Ação" text={p.action} />
+                      <Section title="Resultado" text={p.result} />
+                    </div>
+                    <div className="mt-3">
+                      <Section title="Desenvolvimento" text={p.development} />
+                    </div>
+                  </>
+                ) : null}
               </div>
             );
           })

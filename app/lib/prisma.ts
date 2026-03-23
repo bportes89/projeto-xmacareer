@@ -1,30 +1,24 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pgPool?: Pool };
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function getPool() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
+function getSqliteFilePath(value: string) {
+  if (value.startsWith("file:")) return value.slice("file:".length);
+  return value;
+}
+
+function getSqliteUrl() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
     throw new Error("DATABASE_URL não configurado");
   }
-
-  if (!globalForPrisma.pgPool) {
-    globalForPrisma.pgPool = new Pool({
-      connectionString,
-      max: process.env.NODE_ENV === "production" ? 5 : 2,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 10_000,
-    });
-  }
-
-  return globalForPrisma.pgPool;
+  return getSqliteFilePath(url);
 }
 
 function getPrismaClient() {
   if (globalForPrisma.prisma) return globalForPrisma.prisma;
-  const adapter = new PrismaPg(getPool());
+  const adapter = new PrismaBetterSqlite3({ url: getSqliteUrl() });
   globalForPrisma.prisma = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],

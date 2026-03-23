@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "XMA Career",
   description: "Plataforma de experiências STAR+D e People Analytics",
+  icons: [{ rel: "icon", url: "/xma-career-logo.svg" }],
 };
 
 export default function RootLayout({

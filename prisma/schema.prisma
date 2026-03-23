@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 enum UserRole {
@@ -64,8 +64,24 @@ model User {
   feedbacksGiven ProjectFeedback[]
   evidenceFilesUploaded ProjectEvidenceFile[]
   portfolioShare PortfolioShare?
+  profile UserProfile?
   competencyProfile UserCompetencyProfile?
   competencyProfileSnapshots UserCompetencyProfileSnapshot[]
+}
+
+model UserProfile {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline    String?
+  phone       String?
+  location    String?
+  bio         String?
+  linkedinUrl String?
+  githubUrl   String?
+  websiteUrl  String?
+  portfolioSettings Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Project {

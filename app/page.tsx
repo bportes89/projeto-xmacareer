@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getAuthUser } from "@/app/lib/auth";
 
@@ -12,7 +13,10 @@ export default async function Home() {
     <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-brand-blue via-brand-blue to-brand-blue-hover px-4 py-12">
       <main className="w-full max-w-3xl rounded-3xl border border-slate-300/60 bg-white p-6 shadow-xl sm:p-10">
         <div className="flex flex-col gap-2">
-          <div className="text-sm font-semibold tracking-wide text-brand-blue">XMA Career</div>
+          <div className="flex items-center gap-3">
+            <Image src="/xma-career-logo.svg" alt="XMA Career" width={72} height={72} priority />
+            <div className="text-sm font-semibold tracking-wide text-brand-blue">XMA Career</div>
+          </div>
           <h1 className="text-3xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-4xl">
             Experiências em STAR + D, portfólio e People Analytics
           </h1>

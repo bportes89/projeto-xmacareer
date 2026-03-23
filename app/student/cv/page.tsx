@@ -1,6 +1,7 @@
 import Link from "next/link";
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
+import Script from "next/script";
 
 import { requireAuthUser } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
@@ -43,6 +44,19 @@ function normalizeConfirmedCompetencies(value: unknown) {
     hard: Array.from(new Set(hard.map((x) => x.trim()))).slice(0, 30),
     soft: Array.from(new Set(soft.map((x) => x.trim()))).slice(0, 30),
     areas: Array.from(new Set(areas.map((x) => x.trim()))).slice(0, 30),
+  };
+}
+
+function normalizePortfolioSettings(value: unknown) {
+  if (!value || typeof value !== "object") return { featuredProjectIds: [] as string[], hideStar: false, hideEvidences: false };
+  const v = value as { featuredProjectIds?: unknown; hideStar?: unknown; hideEvidences?: unknown };
+  const featuredProjectIds = Array.isArray(v.featuredProjectIds)
+    ? v.featuredProjectIds.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 3)
+    : [];
+  return {
+    featuredProjectIds,
+    hideStar: Boolean(v.hideStar),
+    hideEvidences: Boolean(v.hideEvidences),
   };
 }
 
@@ -97,12 +111,33 @@ async function ensurePortfolioShare(userId: string) {
   });
 }
 
-export default async function StudentCvPage() {
+export default async function StudentCvPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireAuthUser();
+  const sp = searchParams ? await searchParams : {};
+  const printValue = Array.isArray(sp.print) ? sp.print[0] : sp.print;
+  const isPrint = printValue === "1" || printValue === "true";
   const share = await ensurePortfolioShare(user.id);
   const sharePath = `/p/${share.token}`;
   const taxonomy = await getTaxonomyBundle(prisma);
   const profile = await ensureUserCompetencyProfile(prisma, user.id);
+  const userProfile = await prisma.userProfile.findFirst({
+    where: { userId: user.id },
+    select: {
+      headline: true,
+      phone: true,
+      location: true,
+      bio: true,
+      linkedinUrl: true,
+      githubUrl: true,
+      websiteUrl: true,
+      portfolioSettings: true,
+    },
+  });
+  const portfolioSettings = normalizePortfolioSettings(userProfile?.portfolioSettings);
 
   const projects = await prisma.project.findMany({
     where: { userId: user.id, status: "SUBMITTED" },
@@ -142,8 +177,17 @@ export default async function StudentCvPage() {
     },
   });
 
+  const orderedProjects = (() => {
+    if (portfolioSettings.featuredProjectIds.length === 0) return projects;
+    const featured = portfolioSettings.featuredProjectIds
+      .map((id) => projects.find((p) => p.id === id))
+      .filter((x): x is (typeof projects)[number] => Boolean(x));
+    const rest = projects.filter((p) => !portfolioSettings.featuredProjectIds.includes(p.id));
+    return [...featured, ...rest];
+  })();
+
   const hydrated = await Promise.all(
-    projects.map(async (p) => {
+    orderedProjects.map(async (p) => {
       if (p.analysis) return p;
       const analysis = analyzeProjectText(p, taxonomy);
       const saved = await prisma.projectAnalysis.upsert({
@@ -183,6 +227,12 @@ export default async function StudentCvPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {isPrint ? (
+        <>
+          <Script id="auto-print" strategy="afterInteractive">{`setTimeout(() => window.print(), 50);`}</Script>
+          <style>{`@media print{header{display:none!important}.no-print{display:none!important}}`}</style>
+        </>
+      ) : null}
       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Portfólio e Diagnóstico</h1>
@@ -190,7 +240,19 @@ export default async function StudentCvPage() {
             Gerado a partir das suas experiências enviadas em STAR + D.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="no-print flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/student/profile"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-brand-orange bg-white px-4 text-sm font-semibold text-brand-blue shadow-sm transition hover:-translate-y-px hover:bg-slate-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Meu perfil
+          </Link>
+          <a
+            href="/api/student/cv/pdf"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-brand-orange bg-white px-4 text-sm font-semibold text-brand-blue shadow-sm transition hover:-translate-y-px hover:bg-slate-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Exportar PDF
+          </a>
           <a
             href="/api/student/cv/json"
             className="inline-flex h-10 items-center justify-center rounded-xl border border-brand-orange bg-white px-4 text-sm font-semibold text-brand-blue shadow-sm transition hover:-translate-y-px hover:bg-slate-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
@@ -218,8 +280,51 @@ export default async function StudentCvPage() {
           <div className="rounded-3xl border border-slate-300/70 bg-white p-5 shadow-sm lg:col-span-1">
             <div className="text-sm font-semibold text-slate-900">{user.name}</div>
             <div className="mt-1 text-sm text-slate-600">{user.email}</div>
+            {userProfile?.headline?.trim().length ? (
+              <div className="mt-2 text-sm text-slate-700">{userProfile.headline.trim()}</div>
+            ) : null}
+            {userProfile?.location?.trim().length ? (
+              <div className="mt-1 text-sm text-slate-600">{userProfile.location.trim()}</div>
+            ) : null}
+            {(userProfile?.linkedinUrl || userProfile?.githubUrl || userProfile?.websiteUrl) ? (
+              <div className="no-print mt-3 flex flex-wrap gap-2">
+                {userProfile.linkedinUrl ? (
+                  <a
+                    href={userProfile.linkedinUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+                  >
+                    LinkedIn
+                  </a>
+                ) : null}
+                {userProfile.githubUrl ? (
+                  <a
+                    href={userProfile.githubUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+                  >
+                    GitHub
+                  </a>
+                ) : null}
+                {userProfile.websiteUrl ? (
+                  <a
+                    href={userProfile.websiteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-slate-300/70 bg-white px-3 py-1 text-xs font-semibold text-brand-blue hover:underline"
+                  >
+                    Site
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
+            {userProfile?.bio?.trim().length ? (
+              <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{userProfile.bio.trim()}</div>
+            ) : null}
 
-            <div className="mt-5 rounded-2xl border border-slate-300/70 bg-white p-4 shadow-sm">
+            <div className="no-print mt-5 rounded-2xl border border-slate-300/70 bg-white p-4 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Link público</div>
               <div className="mt-2 flex flex-col gap-2">
                 <a

@@ -63,12 +63,20 @@ export default async function StudentProjectsPage() {
             Comece no celular, finalize no desktop. Tudo salva automaticamente.
           </p>
         </div>
-        <Link
-          href="/student/projects/new"
-          className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-orange px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-brand-orange-hover active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-        >
-          Nova experiência
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+          <Link
+            href="/student/projects/capture/new"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-orange px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-brand-orange-hover active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:order-2"
+          >
+            Captura rápida
+          </Link>
+          <Link
+            href="/student/projects/new"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-300/70 bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-px hover:border-slate-300 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/20 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:order-1"
+          >
+            Nova experiência
+          </Link>
+        </div>
       </div>
 
       {projects.length === 0 ? (

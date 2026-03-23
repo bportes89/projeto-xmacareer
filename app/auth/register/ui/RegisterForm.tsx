@@ -7,11 +7,11 @@ type RegisterState =
   | { status: "submitting" }
   | { status: "error"; message: string };
 
-export default function RegisterForm() {
+export default function RegisterForm({ defaultRole }: { defaultRole?: "STUDENT" | "SCHOOL" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"STUDENT" | "SCHOOL">("STUDENT");
+  const [role, setRole] = useState<"STUDENT" | "SCHOOL">(defaultRole ?? "STUDENT");
   const [state, setState] = useState<RegisterState>({ status: "idle" });
   const [isPending, startTransition] = useTransition();
 
