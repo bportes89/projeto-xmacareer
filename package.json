@@ -5,16 +5,14 @@
   "scripts": {
     "predev": "prisma generate",
     "dev": "next dev",
-    "prebuild": "prisma generate",
+    "prebuild": "node -e \"const { execSync } = require('node:child_process'); const enabled = process.env.APPLY_DB_PUSH === '1'; if (!enabled) { process.exit(0); } console.log('[XMA] APPLY_DB_PUSH=1: executando prisma db push'); execSync('npx prisma db push', { stdio: 'inherit' });\" && prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.1.1",
     "jose": "^6.2.1",
     "next": "16.2.0",
     "prisma": "^7.5.0",
@@ -26,7 +24,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/better-sqlite3": "^7.6.11",
     "@types/pdfkit": "^0.13.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
